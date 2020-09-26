@@ -13,6 +13,7 @@ class ModelType(Enum):
     SELECT_DATABASE = 1
     NODE_TO_QUERY = 2
     SYSTEM_STAT_ENDPOINT = 3
+    NUMBER_OF_ACTIVE_QUERIES = 4
     #Push
     TELEMETRY_DATA = 101
     UPDATE_TIMESTAMP_FOR_ID = 102
@@ -51,6 +52,9 @@ class Models:
         elif(self.modelType == ModelType.SYSTEM_STAT_ENDPOINT):
             self.query = ("SELECT "+dbc.KEY_API_ID+", "+dbc.KEY_ENDPOINT+" "
                               +" FROM "+dbc.TABLE_NODE_API_LIST+" WHERE "+dbc.KEY_API_ID+" = 'System Statistics';")
+
+        elif(self.modelType == ModelType.NUMBER_OF_ACTIVE_QUERIES):
+            self.query = ("select count(*) from node_list where status != 'INACTIVE';")
 
         else:
             print("ERROR: Unsupported model type for method:fetch : ",str(self.modelType))
@@ -168,12 +172,13 @@ class Models:
             print("Error! Empty query / unsupported ModelType")
             return
 
-
-        results = []
+        rowsAffected = -1
         try:
             cursor = self.dbConnection.cursor()
-            results = cursor.execute(self.query, self.sqlParameterTuple)
+            cursor.execute(self.query, self.sqlParameterTuple)
             self.dbConnection.commit()
+            #print("Cursor.rowcount results: ", cursor.rowcount)
+            rowsAffected = cursor.rowcount
         except mysql.connector.Error as e:
             print ("MySQL query failed. Exception: ",e)
             print ("Query: ", self.query)
@@ -181,4 +186,4 @@ class Models:
             cursor.close()
             self.wrapUp()
         
-        return results
+        return rowsAffected

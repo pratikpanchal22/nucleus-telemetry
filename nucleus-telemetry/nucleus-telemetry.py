@@ -33,11 +33,10 @@ def iterate():
     api = Models().fetch(ModelType.SYSTEM_STAT_ENDPOINT)
     api_id = api[0][0]
     ep = api[0][1]
-    print("sysstat ep: ", ep)
 
     #request 
     url = 'http://'+nodeIp+ep
-    print (url)
+    print ("-> URL to GET: ", url)
 
     jsonResponse = '{}'
     http_status_code = -1
@@ -46,40 +45,56 @@ def iterate():
     try:
         td = requests.get(url, timeout=10)
         jsonResponse = td.text
-        print(">>> jsonResponse: ", jsonResponse)
         http_status_code = td.status_code
+
+        print("-> Response HTTP status code:", http_status_code)
 
         if(http_status_code != 200):
             status_str = "FAIL"
+            print("-> Response: ", jsonResponse)
 
-        print(">>> type of jsonResponse['node']: " ,type(td.json()['node']))
         if(nodeId != td.json()['node']):
             status_str = "Mismatched NodeId"
 
     except requests.exceptions.Timeout as e:
-        print("Exception: Timeout: ",e)
+        print("-> Exception: Timeout: ",e)
         status_str = str(e)
     except requests.exceptions.RequestsWarning as e:
-        print("Exception: RequestsWarning: ",e)
+        print("-> Exception: RequestsWarning: ",e)
         status_str = str(e)
     except requests.exceptions.RetryError as e:
-        print("Exception: RetryError: ",e)
+        print("-> Exception: RetryError: ",e)
         status_str = str(e)
     except requests.exceptions.RequestException as e:
-        print("Exception: RequestException: ",e)
+        print("-> Exception: RequestException: ",e)
         status_str = str(e)
 
-    Models().push(ModelType.TELEMETRY_DATA, 
+    #Add telemetry data
+    rowsAdded = Models().push(ModelType.TELEMETRY_DATA, 
                     nodeId,
                     api_id,
                     http_status_code,
                     jsonResponse,
                     status_str)
+    print("-> Number of telemetry data-rows added successfully:", rowsAdded)
+
+    if(rowsAdded != 1):
+        print (" ERROR! Expected 1. Received:", rowsAdded)
 
     #Update node_list with ts
-    Models().push(ModelType.UPDATE_TIMESTAMP_FOR_ID, id)
+    rowsAdded = Models().push(ModelType.UPDATE_TIMESTAMP_FOR_ID, id)
+    print("-> Timestamp updated for node", nodeId,"| Rows updated:",rowsAdded)
 
-    nextThread = threading.Timer(15, iterate)
+    if(rowsAdded != 1):
+        print (" ERROR! Expected 1. Received:", rowsAdded)
+
+    numberOfNodesToQuery = Models().fetch(ModelType.NUMBER_OF_ACTIVE_QUERIES)[0][0]
+    nodeQueryPeriodicity = 120 #seconds - TODO: fetch from database
+    secondsToPause = nodeQueryPeriodicity / numberOfNodesToQuery
+
+    print("-> Next thread will run in ",secondsToPause, " seconds")
+
+    nextThread = threading.Timer(secondsToPause, iterate)
     nextThread.start()
 
 if __name__ == "__main__":
