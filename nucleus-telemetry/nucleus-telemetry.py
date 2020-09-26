@@ -1,4 +1,5 @@
 import requests
+import threading
 #
 from models.data import Models
 from models.data import ModelType
@@ -22,12 +23,12 @@ def iterate():
             cursor.close()
             conn.close()"""
 
+    print ("\nNew Iteration")
+
     response = Models().fetch(ModelType.NODE_TO_QUERY)
     id = response[0][0]
     nodeIp = response[0][1]
-    print ("REsponse type: ", type(response))
-    print ("Response: ", response)
-    print ("nodeIp: ", nodeIp)
+    nodeId = response[0][2]
 
     api = Models().fetch(ModelType.SYSTEM_STAT_ENDPOINT)
     api_id = api[0][0]
@@ -37,27 +38,49 @@ def iterate():
     #request 
     url = 'http://'+nodeIp+ep
     print (url)
-    td = requests.get(url)
-    print(td.status_code)
-    print(td.text)
 
-    status_str = "FAIL"
-    if(td.status_code == 200):
-        status_str = "SUCCESS"
-    
-    jsonResponse = td.json()
-    print(jsonResponse['ip'])
-    print(jsonResponse['node'])
+    jsonResponse = '{}'
+    http_status_code = -1
+    status_str = "SUCCESS"
+
+    try:
+        td = requests.get(url, timeout=10)
+        jsonResponse = td.text
+        print(">>> jsonResponse: ", jsonResponse)
+        http_status_code = td.status_code
+
+        if(http_status_code != 200):
+            status_str = "FAIL"
+
+        print(">>> type of jsonResponse['node']: " ,type(td.json()['node']))
+        if(nodeId != td.json()['node']):
+            status_str = "Mismatched NodeId"
+
+    except requests.exceptions.Timeout as e:
+        print("Exception: Timeout: ",e)
+        status_str = str(e)
+    except requests.exceptions.RequestsWarning as e:
+        print("Exception: RequestsWarning: ",e)
+        status_str = str(e)
+    except requests.exceptions.RetryError as e:
+        print("Exception: RetryError: ",e)
+        status_str = str(e)
+    except requests.exceptions.RequestException as e:
+        print("Exception: RequestException: ",e)
+        status_str = str(e)
 
     Models().push(ModelType.TELEMETRY_DATA, 
-                    jsonResponse['node'],
+                    nodeId,
                     api_id,
-                    td.status_code,
-                    td.text,
+                    http_status_code,
+                    jsonResponse,
                     status_str)
 
     #Update node_list with ts
     Models().push(ModelType.UPDATE_TIMESTAMP_FOR_ID, id)
+
+    nextThread = threading.Timer(15, iterate)
+    nextThread.start()
 
 if __name__ == "__main__":
     iterate()
