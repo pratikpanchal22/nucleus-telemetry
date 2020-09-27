@@ -1,0 +1,14 @@
+[Unit]
+Description=Nuclues Telemetry Service
+After=network.target
+StartLimitIntervalSec=10
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=appuser
+ExecStart=/usr/bin/python3 /home/appuser/nucleus-telemetry/nucleus-telemetry/nucleus-telemetry.py 
+
+[Install]
+WantedBy=multi-user.target
