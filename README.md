@@ -13,20 +13,51 @@ python3 -m venv ./venv
 source venv/bin/activate
 ```
 
-#### Install dependencies
+##### Install dependencies
 
 ```
 pip3 install -r requirements.txt
 ```
 
-#### Run application
+##### Run application
 
 ```
 python3 nucleus-telemetry/nucleus-telemetry.py
 ```
 
-#### Deactivate virtual environment
+##### Deactivate virtual environment
 
 ```
 deactivate
 ```
+----------------------------------------------------------------------------------
+### Add application as a service
+
+```
+cp nucleus-telemetry/nucleus-telemetry.service /etc/systemd/system/.
+```
+
+Edit the User and Exec parameters to match the actual user the application needs to run as
+Edit the Exec parameter to match the correct path for python3 and nucleus-telemetry.py
+
+##### Start the service:  
+```
+systemctl start nucleus-telemetry.service
+``` 
+  
+##### Enable the service to start automatically on boot:  
+```
+systemctl enable nucleus-telemetry.service  
+```
+  
+##### To restart the service:  
+```
+systemctl restart nucleus-telemetry.service
+```
+or
+```
+systemctl stop nucleus-telemetry.service
+...
+systemctl start nucleus-telemetry.service
+```
+
