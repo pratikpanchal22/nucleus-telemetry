@@ -12,8 +12,9 @@ class ModelType(Enum):
     #Fetch
     SELECT_DATABASE = 1
     NODE_TO_QUERY = 2
-    SYSTEM_STAT_ENDPOINT = 3
+    FETCH_ENDPOINT_FOR_API_ID = 3
     NUMBER_OF_ACTIVE_QUERIES = 4
+    LAST_NODE_TELEMETRY_RECORD = 5
     #Push
     TELEMETRY_DATA = 101
     UPDATE_TIMESTAMP_FOR_ID = 102
@@ -47,14 +48,33 @@ class Models:
                               +" FROM "+dbc.TABLE_NODE_LIST+ " WHERE "
                               +dbc.KEY_STATUS+" != 'INACTIVE' " 
                               +" ORDER BY " +dbc.KEY_TS_LAST_UPDATED+ " ASC LIMIT 1;")
-            #print (self.query)
         
-        elif(self.modelType == ModelType.SYSTEM_STAT_ENDPOINT):
+        elif(self.modelType == ModelType.FETCH_ENDPOINT_FOR_API_ID):
+            try: 
+                apiId = argv[0]
+            except:
+                print("ERROR: Expected apiId")
+                self.wrapUp()
+                return
+
             self.query = ("SELECT "+dbc.KEY_API_ID+", "+dbc.KEY_ENDPOINT+" "
-                              +" FROM "+dbc.TABLE_NODE_API_LIST+" WHERE "+dbc.KEY_API_ID+" = 'System Statistics';")
+                              +" FROM "+dbc.TABLE_NODE_API_LIST
+                              +" WHERE "+dbc.KEY_API_ID+" = '"+apiId+"';")
 
         elif(self.modelType == ModelType.NUMBER_OF_ACTIVE_QUERIES):
             self.query = ("select count(*) from node_list where status != 'INACTIVE';")
+
+        elif(self.modelType == ModelType.LAST_NODE_TELEMETRY_RECORD):
+            try: 
+                nodeId = argv[0]
+            except:
+                print("ERROR: Expected nodeId")
+                self.wrapUp()
+                return
+
+            self.query = ("select * from node_telemetry "
+			            +" where nodeId = " + str(nodeId)
+                        +" order by ts_created desc limit 1;")
 
         else:
             print("ERROR: Unsupported model type for method:fetch : ",str(self.modelType))

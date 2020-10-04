@@ -1,36 +1,29 @@
 import requests
 import threading
+from datetime import datetime
 #
 from models.data import Models
 from models.data import ModelType
 
-def iterate():
-    """try:
-        conn = mysql.connector.connect(host='localhost', database='appDbSandbox', user='user', password='password')
-        if conn.is_connected():
-            cursor = conn.cursor()
-            cursor.execute("select database();")
-            record = cursor.fetchall()
-            print("You're connected to - ", record)
-
-        r=requests.get('http://192.168.1.83/get/sysstat')
-        print(r.status_code)
-        print(r.text)
-    except Error as e:
-        print ("Print your error msg", e)
-    finally:
-        if(conn.is_connected()):
-            cursor.close()
-            conn.close()"""
-
-    print ("\nNew Iteration")
+def iterate():    
+    print ("\nNew Iteration:", datetime.now())
 
     response = Models().fetch(ModelType.NODE_TO_QUERY)
     id = response[0][0]
     nodeIp = response[0][1]
     nodeId = response[0][2]
 
-    api = Models().fetch(ModelType.SYSTEM_STAT_ENDPOINT)
+    lastRecord = Models().fetch(ModelType.LAST_NODE_TELEMETRY_RECORD, nodeId)
+
+    apiIdToFetch = "Identity"
+    if(lastRecord[0][3] == 'System statistics'):
+        apiIdToFetch = "Identity"
+    elif(lastRecord[0][3] == 'Identity'):
+        apiIdToFetch = "System statistics"
+    else:
+        apiIdToFetch = "Identity"
+
+    api = Models().fetch(ModelType.FETCH_ENDPOINT_FOR_API_ID, apiIdToFetch)
     api_id = api[0][0]
     ep = api[0][1]
 
